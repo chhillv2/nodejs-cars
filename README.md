@@ -1,7 +1,7 @@
 # nodejs-cars There are two folders: 1) server 2) client
 1. Run the below commands for both client side as well as server side
 
-run npm i 
+npm i 
 npm start
 
 Server side code will run on 3000 by default and please run client side on some other port. 
