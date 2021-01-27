@@ -1,71 +1,5 @@
 const fs = require('fs')
-const chalk = require('chalk')
 const csv = require('csv-parser');
-
-const addNote = (title, body) => {
-  const notes = loadNotes()
-  const duplicateNote = notes.find((note) => note.title === title)
-
-  if (!duplicateNote) {
-    notes.push({
-      title: title,
-      body: body
-    })
-    saveNotes(notes)
-    console.log(chalk.green.inverse('New note added!'))
-  } else {
-    console.log(chalk.red.inverse('Note title taken!'))
-  }
-}
-
-const removeNote = (title) => {
-  const notes = loadNotes()
-  const notesToKeep = notes.filter((note) => note.title !== title)
-
-  if (notes.length > notesToKeep.length) {
-    console.log(chalk.green.inverse('Note removed!'))
-    saveNotes(notesToKeep)
-  } else {
-    console.log(chalk.red.inverse('No note found!'))
-  }
-}
-
-const listNotes = () => {
-  const notes = loadNotes()
-
-  console.log(chalk.inverse('Your notes'))
-
-  notes.forEach((note) => {
-    console.log(note.title)
-  })
-}
-
-const readNote = (title) => {
-  const notes = loadNotes()
-  const note = notes.find((note) => note.title === title)
-
-  if (note) {
-    console.log(chalk.inverse(note.title))
-    console.log(note.body)
-  } else {
-    console.log(chalk.red.inverse('Note not found!'))
-  }
-}
-
-const saveNotes = (notes) => {
-  const dataJSON = JSON.stringify(notes)
-  fs.writeFileSync('notes.json', dataJSON)
-}
-
-const loadNotes = () => {
-  try {
-    const dataBuffer = fs.readFileSync('notes.json')
-    const dataJSON = dataBuffer.toString()
-    return JSON.parse(dataJSON)
-  } catch (e) {
-    return []
-  }
-}
 
 const averageListingprice = () => {
   let dealerCount = 0
@@ -108,6 +42,37 @@ const distributionMake = () => {
       make.push(row.make)
       count += 1
     })
+    .on('end', () => {
+      let countedNames = make.reduce(function (allNames, name) {
+        if (name in allNames) {
+          allNames[name]++
+        }
+        else {
+          allNames[name] = 1
+        }
+        return allNames
+      }, {})
+
+      const sortable = Object.entries(countedNames)
+        .sort(([, a], [, b]) => b - a)
+        .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
+
+      console.log(countedNames);
+
+      for (const [key, value] of Object.entries(sortable)) {
+        console.log(`${key}: ${((value / count) * 100).toFixed(2)} %`);
+      }
+    });
+}
+
+const mostContactedlisting = () => {
+  let make = []
+
+  fs.createReadStream('contacts.csv')
+    .pipe(csv())
+    .on('data', (row) => {
+      make.push(JSON.stringify(row.listing_id))
+    })
 
     .on('end', () => {
       let countedNames = make.reduce(function (allNames, name) {
@@ -120,70 +85,89 @@ const distributionMake = () => {
         return allNames
       }, {})
 
-      var objSorted = {}
-      sortable.forEach(function(item){
-        objSorted[item[0]]=item[1]
-      })
-
       const sortable = Object.entries(countedNames)
         .sort(([, a], [, b]) => b - a)
         .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
 
-      console.log(countedNames);
-      
-      for (const [key, value] of Object.entries(sortable)) {
-        console.log(`${key}: ${((value / count) * 100).toFixed(2)} %`);
-      }
+      const lengthSortable = 0.3 * Object.keys(sortable).length;
+
+      let thirtyPercent = []
+      Object.keys(sortable).forEach((k, i) => {
+        if (i >= 0 && i < lengthSortable) {
+          thirtyPercent.push(JSON.parse(k))
+        }
+      });
+
+      totalPrice = 0
+      totalEntries = 0
+      data = []
+
+      fs.createReadStream('listings.csv')
+        .pipe(csv())
+
+        .on('data', (row) => {
+
+          Object.keys(thirtyPercent).forEach(function (key) {
+            if (thirtyPercent[key] === row.id) {
+              data.push(row.price)
+              totalEntries += 1
+            }
+          });
+
+        })
+        .on('end', () => {
+          let sum = 0
+          for (let i = 0; i <= data.length; i++) {
+            sum += parseInt(data, 10);
+          }
+          console.log("data", sum / totalEntries, typeof sum);
+        });
     });
 }
 
-const mostContactedlisting = () => {
-  let count = 0
-  let make = []
-  var sortable = [];
 
+const topfivepermonth = () => {
+  let data = []
+  let obj = {}
+
+  var dict = []; // create an empty array
 
   fs.createReadStream('contacts.csv')
     .pipe(csv())
     .on('data', (row) => {
-      make.push(row.listing_id)  
+      data.push(new Date(parseInt(row.contact_date, 10)).getMonth())
+      dict.push({
+        key: new Date(parseInt(row.contact_date, 10)).getMonth(),
+        value: row.listing_id
+      });
     })
-
     .on('end', () => {
-      const formatMake = JSON.parse(make)
-      let countedNames = formatMake.reduce(function (allNames, name) {
-        if (name in allNames) {
-          allNames[name]++
+      // console.log('data', dict);
+
+      var output = [];
+
+      dict.forEach(function (item) {
+        var existing = output.filter(function (v, i) {
+          return v.key == item.key;
+        });
+        if (existing.length) {
+          var existingIndex = output.indexOf(existing[0]);
+          output[existingIndex].value = output[existingIndex].value.concat(item.value);
+        } else {
+          if (typeof item.value == 'string')
+            item.value = [item.value];
+          output.push(item);
         }
-        else {
-          allNames[name] = 1
-        }
-        return allNames
-      }, {})
+      });
 
-      const sortable = Object.entries(countedNames)
-      .sort(([, a], [, b]) => a-b)
-      .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
-
-      for (const [key, value] of Object.entries(sortable)) {
-        console.log(`${key}: ${value}`);
-      }
-      var objSorted = {}
-
-      make.forEach(function(item){
-        objSorted[item[0]]=item[1]
-    })
-      // console.log("sorrttt", make);
-  
+      console.log(output);
+      
     });
 }
 
 module.exports = {
-  addNote: addNote,
-  removeNote: removeNote,
-  listNotes: listNotes,
-  readNote: readNote,
   averageListingprice,
   distributionMake,
-  mostContactedlisting
+  mostContactedlisting,
+  topfivepermonth
 }
