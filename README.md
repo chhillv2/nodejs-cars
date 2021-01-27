@@ -5,9 +5,10 @@ npm i
 npm start
 
 Server side code will run on 3000 by default and please run client side on some other port. 
-The server code can also be run by:
 
-# node app.js "name of command which is defined in app.js file in server folder"
+# The server code can also be tested by command line:
+
+node app.js "name of command which is defined in app.js file in server folder"
 
 # Docker
 docker build -t <your username>/node-web-app .
